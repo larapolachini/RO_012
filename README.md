@@ -11,6 +11,8 @@ La boucle principale du programme exécute, à chaque pas de temps, la prédicti
 
 <p align="center">
   <img src="Q2.png" alt="EKF Trajectory" title="Estimated vs True Trajectory (EKF)" width="500">
+  <br>
+  <em>Figure 1 – Comparison between True and Estimated Trajectories using EKF.</em>
 </p>
 
 ## Q3
