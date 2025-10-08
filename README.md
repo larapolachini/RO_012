@@ -9,17 +9,41 @@ La boucle principale du programme exécute, à chaque pas de temps, la prédicti
 
 ## Q2
 
+Le fichier EKFLocalization.py a été complété afin d’intégrer l’ensemble des équations du filtre de Kalman étendu (EKF). Le modèle dynamique, le modèle de mesure ainsi que les matrices jacobiennes associées ont été implémentés conformément aux équations du cours.
+
+Le résultat de la simulation avec les données initiales peut être observé dans la figure suivante.
+
+
 <p align="center">
   <img src="Q2.png" alt="EKF Trajectory" title="Estimated vs True Trajectory (EKF)" width="500">
   <br>
-  <em>Figure 1 – Comparison between True and Estimated Trajectories using EKF.</em>
+  <em>Figure 1 – Résultat Initial </em>
 </p>
+
+Pour cette simulation, on peut constater que la trajectoire réelle et la trajectoire du filtre sont très proches, pratiquement identiques, avec une erreur faible.
+
 
 ## Q3
 
-![EKF Trajectory](Q3-dt_meas=50.png)
-![EKF Trajectory](Q3-dt_meas=100.png)
-![EKF Trajectory](Q3-dt_meas=200.png)
+Ici sont présentées quelques simulations résultant de la variation de la fréquence de mesure
+
+<p align="center">
+  <img src="Q3-dt_meas=50.png" alt="" title="" width="500">
+  <br>
+  <em>Figure 2 – Variation de la fréquence de mesure dt_meas = 50 </em>
+</p>
+
+<p align="center">
+  <img src="Q3-dt_meas=100.png" alt="" title="" width="500">
+  <br>
+  <em>Figure 3 –  Variation de la fréquence de mesure dt_meas = 100 </em>
+</p>
+
+<p align="center">
+  <img src="Q3-dt_meas=200.png" alt="" title="" width="500">
+  <br>
+  <em>Figure 4 –  Variation de la fréquence de mesure dt_meas = 200 </em>
+</p>
 
 ## Q4
 
