@@ -9,7 +9,9 @@ La boucle principale du programme exécute, à chaque pas de temps, la prédicti
 
 ## Q2
 
-![EKF Trajectory](Q2.png)
+<p align="center">
+  <img src="Q2.png" alt="EKF Trajectory" title="Estimated vs True Trajectory (EKF)" width="500">
+</p>
 
 ## Q3
 
