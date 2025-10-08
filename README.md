@@ -8,11 +8,46 @@ Le code étudié met en œuvre un filtre de Kalman étendu (EKF) appliqué à la
 La boucle principale du programme exécute, à chaque pas de temps, la prédiction de la position du robot à partir de l’odométrie, puis la correction de cette estimation dès qu’une mesure de balise est disponible. Le filtre utilise pour cela les matrices de covariance des bruits de mouvement et de mesure (Q et R), ainsi que la covariance de l’estimation P, qui reflète l’incertitude du robot sur sa position. Enfin, le code affiche et compare les trajectoires réelle, odométrique et estimée, permettant d’évaluer la performance du filtre. En résumé, le programme est structuré autour de deux volets principaux : la simulation du comportement physique du robot et de ses capteurs, et l’algorithme d’estimation du filtre de Kalman étendu, qui combine prédiction et correction pour améliorer la précision de la localisation.
 
 ## Q2
+
+![EKF Trajectory](Q2.png)
+
 ## Q3
+
+![EKF Trajectory](Q3-dt_meas=50.png)
+![EKF Trajectory](Q3-dt_meas=100.png)
+![EKF Trajectory](Q3-dt_meas=200.png)
+
 ## Q4
+
+![EKF Trajectory](Q4-QEst=50.png)
+![EKF Trajectory](Q4-QEst=100.png)
+![EKF Trajectory](Q4-QEst=200.png)
+
 ## Q5
+
+![EKF Trajectory](Q5-REst=50.png)
+![EKF Trajectory](Q5-REst=100.png)
+![EKF Trajectory](Q5-REst=200.png)
+
 ## Q6
+
+![EKF Trajectory](Q6.png)
+
 ## Q7
+
+![EKF Trajectory](Q7-n=4.png)
+![EKF Trajectory](Q7-n=100.png)
+![EKF Trajectory](Q7-n=200.png)
+
 ## Q8
+
+![EKF Trajectory](Q8-n=4.png)
+![EKF Trajectory](Q8-n=100.png)
+![EKF Trajectory](Q8-n=200.png)
+
 ## Q9
+
+![EKF Trajectory](Q9-n=4.png)
+![EKF Trajectory](Q9-n=100.png)
+![EKF Trajectory](Q9-n=200.png)
 
