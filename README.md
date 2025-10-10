@@ -135,7 +135,7 @@ Ici on peut voir des simulations en faisant varier le nombre d'amers sur la cart
 </p>
 
 
-On constate qu’en accroissant le nombre d'amers dans l’environnement de simulation, les performances du filtre de Kalman s’améliorent légèrement : l’erreur, la covariance et la taille de l’ellipse diminuent, signe d’un fonctionnement plus précis de l’algorithme. Cette amélioration s’explique sans doute par une meilleure sélection des références, offrant un compromis optimal entre erreurs angulaires et erreurs de distance, les premières dominant à grande portée, les secondes à faible distance.
+On constate qu’en accroissant le nombre d'amers dans l’environnement de simulation, les performances du filtre de Kalman s’améliorent légèrement : l’erreur, la covariance et la taille de l’ellipse diminuent, signe d’un fonctionnement plus précis de l’algorithme. Cette amélioration s’explique sans doute par une meilleure sélection des références, offrant un compromis optimal entre erreurs angulaires et erreurs de distance.
 
 
 ## Q8
