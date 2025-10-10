@@ -186,4 +186,4 @@ Ici on peut voir des simulations où seulement les mesures de direction sont dis
 </p>
 
 
-On constate que lorsque seules les mesures d’angle sont utilisées dans le filtre de Kalman, la trajectoire reste globalement stable, malgré une augmentation de la variance qui réduit la confiance dans l’estimation. Contrairement au cas des distances, l’ajout de références supplémentaires améliore nettement la précision de la trajectoire, montrant que les mesures d’angle sont particulièrement sensibles à la présence de références dans la simulation.
+On constate que lorsque seules les mesures d’angle sont utilisées dans le filtre de Kalman, la trajectoire reste globalement stable. Contrairement au cas des distances, l’ajout de références supplémentaires améliore nettement la précision de la trajectoire, montrant que les mesures d’angle sont particulièrement sensibles à la présence de références dans la simulation.
