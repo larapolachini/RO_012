@@ -75,7 +75,7 @@ On remarque que lorsque le bruit de mesure s’intensifie, la dispersion des obs
 
 ## Q5 
 
-La variation du seuil de ré-échantillonnage (\theta_{\mathrm{eff}}) met clairement en évidence l’impact de ce paramètre sur le comportement du filtre particulaire. On peut voir ça dans la figure suivant.
+La variation du seuil de ré-échantillonnage (theta_eff) met clairement en évidence l’impact de ce paramètre sur le comportement du filtre particulaire. On peut voir ça dans la figure suivant.
 
 
 <p align="center">
@@ -110,7 +110,7 @@ Lorsque les mesures sont coupées entre 250 s et 350 s, le filtre particulaire n
 ## Q7
 
 
-Ici sont présentées quelques simulations résultant de la variation de la fréquence de mesure
+Ici on a une simulation résultant de la variation de la fréquence de mesure
 
 <p align="center">
   <img src="Q7-dt=10.png" alt="" title="" width="500">
