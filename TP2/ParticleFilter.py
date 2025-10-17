@@ -79,10 +79,30 @@ class Simulation:
                 zNoise = np.array([zNoise]).T
                 z = observation_model(self.xTrue, iFeature, self.Map) + zNoise
                 z[1, 0] = angle_wrap(z[1, 0])
+
+        # Model Q6  
+
+        #if k*self.dt_pred % self.dt_meas == 0:
+        #    t = k * self.dt_pred
+        #    notValidCondition = (t >= 250) and (t <= 350)  # AUCUNE mesure entre 250s et 350s
+        #    if notValidCondition:
+        #        z = None
+        #        iFeature = None
+        #    else:
+        #        iFeature = np.random.randint(0, self.Map.shape[1])  # borne haute exclusive
+        #        zNoise = np.sqrt(self.RTrue) @ np.random.randn(2)
+        #        zNoise = np.array([zNoise]).T
+        #        z = observation_model(self.xTrue, iFeature, self.Map) + zNoise
+        #        z[1, 0] = angle_wrap(z[1, 0])
+
         else:
             z = None
             iFeature = None
         return [z, iFeature]
+    
+        
+        
+
 
 
 
@@ -319,7 +339,7 @@ dt_pred = 1     # Time between two dynamical predictions (s)
 dt_meas = 1     # Time between two measurement updates (s)
 
 # Location of landmarks
-nLandmarks = 5
+nLandmarks = 100
 Map = 120*np.random.rand(2, nLandmarks)-60
 
 # True covariance of errors used for simulating robot movements

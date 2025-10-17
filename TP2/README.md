@@ -85,13 +85,13 @@ La variation du seuil de ré-échantillonnage (\theta_{\mathrm{eff}}) met claire
 </p>
 
 
-Pour des valeurs faibles ((0.0 \leq \theta_{\mathrm{eff}} \leq 0.1)), les histogrammes des poids sont très déséquilibrés : quelques particules ont des poids élevés, les autres sont presque nulles. Cela correspond à une **dégénérescence** du filtre, avec une forte perte de diversité et une baisse de (N_{\mathrm{eff}}).
+Pour des valeurs faibles, les histogrammes des poids sont très déséquilibrés : quelques particules ont des poids élevés, les autres sont presque nulles. Cela correspond à une dégénérescence du filtre, avec une forte perte de diversité et une baisse de N_eff.
 
-Pour une valeur intermédiaire ((\theta_{\mathrm{eff}} \approx 0.2)), la distribution des poids devient plus équilibrée et (N_{\mathrm{eff}}) augmente. Le ré-échantillonnage intervient alors au bon moment, maintenant la diversité tout en limitant la concentration excessive.
+Pour une valeur intermédiaire (theta_eff approx 0.2), la distribution des poids devient plus équilibrée et N_eff augmente. Le ré-échantillonnage intervient alors au bon moment, maintenant la diversité tout en limitant la concentration excessive.
 
-Pour des valeurs élevées ((\theta_{\mathrm{eff}} \geq 0.4)), les poids deviennent presque uniformes et (N_{\mathrm{eff}}) atteint son maximum. Cela empêche la dégénérescence, mais un ré-échantillonnage trop fréquent peut réduire la diversité des particules.
+Pour des valeurs élevées (theta_eff >= 0.4), les poids deviennent presque uniformes et N_eff atteint son maximum. Cela empêche la dégénérescence, mais un ré-échantillonnage trop fréquent peut réduire la diversité des particules.
 
-Ainsi, un **seuil trop bas** favorise la dégénérescence, tandis qu’un **seuil trop haut** peut induire une sur-représentation prématurée. Un **compromis intermédiaire** permet de maintenir une bonne précision tout en préservant la diversité.
+Ainsi, un seuil trop bas favorise la dégénérescence, tandis qu’un seuil trop haut peut induire une sur-représentation prématurée. Un compromis intermédiaire permet de maintenir une bonne précision tout en préservant la diversité.
 
 
 ## Q6
@@ -99,12 +99,12 @@ Ainsi, un **seuil trop bas** favorise la dégénérescence, tandis qu’un **seu
 Ici on peut voir une simulation d'un trou de mesures entre 250 et 350 secondes:
 
 <p align="center">
-  <img src="Q6.png" alt="Mesures entre 2500s et 3500s" title="Simulation d'un trou notValidCondition" width="500">
+  <img src="Q6.png" alt="Mesures entre 250s et 350s" title="Simulation d'un trou notValidCondition" width="500">
   <br>
-  <em>Figure 11 – Simulation d'un trou notValidCondition = true </em>
+  <em>Figure 9 – Simulation d'un trou notValidCondition = true </em>
 </p>
 
-Il apparaît clairement que, pendant l’interruption des mesures entre 2500 et 3000 secondes (en comparaison avec la simulation initiale où notValidCondition = false sur la figure Q2), on observe une augmentation de l’erreur ainsi que de la covariance, conséquence directe de l’absence de correction par le filtre de Kalman. Toutefois, dès que les mesures sont rétablies, le filtre reprend son fonctionnement normal, ajuste progressivement les estimations et parvient, après quelques itérations, à retrouver un état similaire à celui de la simulation complète.
+Lorsque les mesures sont coupées entre 250 s et 350 s, le filtre particulaire ne fait que la prédiction avec l’odométrie. L’incertitude augmente, les particules se dispersent et la trajectoire estimée dérive de la réalité. À la reprise des mesures, la mise à jour et le ré-échantillonnage permettent au filtre de se recaler rapidement sur la trajectoire vraie, réduisant l’erreur et resserrant les bandes d’incertitude.
 
 
 ## Q7
@@ -113,95 +113,30 @@ Il apparaît clairement que, pendant l’interruption des mesures entre 2500 et 
 Ici sont présentées quelques simulations résultant de la variation de la fréquence de mesure
 
 <p align="center">
-  <img src="Q3-dt_meas=50.png" alt="" title="" width="500">
+  <img src="Q7-dt_meas=10.png" alt="" title="" width="500">
   <br>
-  <em>Figure 2 – Variation de la fréquence de mesure dt_meas = 50 </em>
+  <em>Figure 10 – Variation de la fréquence de mesure dt_meas = 10 </em>
 </p>
 
-<p align="center">
-  <img src="Q3-dt_meas=100.png" alt="" title="" width="500">
-  <br>
-  <em>Figure 3 –  Variation de la fréquence de mesure dt_meas = 100 </em>
-</p>
 
-<p align="center">
-  <img src="Q3-dt_meas=200.png" alt="" title="" width="500">
-  <br>
-  <em>Figure 4 –  Variation de la fréquence de mesure dt_meas = 200 </em>
-</p>
+Avec une fréquence de mesure réduite à 0,1 Hz (`dt_meas = 10` s), le filtre reçoit moins d’informations capteurs. L’incertitude augmente entre deux mesures et la trajectoire estimée suit davantage l’odométrie, ce qui amplifie la dérive. Les corrections deviennent plus rares, donc l’erreur reste plus élevée et les bandes d’incertitude sont plus larges, même si le filtre reste globalement stable.
 
-On peut voir que l’allongement de l’intervalle entre les mesures provoque une dégradation notable de la trajectoire, traduisant une diminution de la précision du calcul effectué par le filtre de Kalman. Cette dégradation se manifeste à travers plusieurs éléments, tels qu’une augmentation des erreurs sur les états du système, une hausse de l’écart-type et un élargissement de l’ellipse de covariance. Cette situation s’explique par le fait qu’un intervalle de mesure plus long entraîne davantage d’itérations entre deux observations successives, ce qui favorise l’accumulation des erreurs et, par conséquent, une détérioration des performances globales du filtre de Kalman.
+## Q8
 
 Ici on peut voir des simulations en faisant varier le nombre d'amers sur la carte (nLandmarks):
 
 <p align="center">
-  <img src="Q7-n=4.png" alt="" title="" width="500">
+  <img src="Q8-n=4.png" alt="" title="" width="500">
   <br>
   <em>Figure 12 – nLandmarks = 4 </em>
 </p>
 
 <p align="center">
-  <img src="Q7-n=100.png" alt="" title="" width="500">
+  <img src="Q8-n=100.png" alt="" title="" width="500">
   <br>
   <em>Figure 13 –  nLandmarks = 100 </em>
 </p>
 
-<p align="center">
-  <img src="Q7-n=200.png" alt="" title="" width="500">
-  <br>
-  <em>Figure 14 – nLandmarks = 200 </em>
-</p>
 
+On constate qu’en accroissant le nombre d'amers dans l’environnement de simulation, il n'a pas beaucoup d'influence sur le resultat du filtre particulaire car l'erreur, la covariance et la trajectoire ne présentent pas des changements significatives. Tant que les particules sont bien réparties et que le modèle de capteur relie avec précision les mesures aux amers, le filtre peut fonctionner efficacement avec un nombre réduit d'amers en se concentrant sur les mises à jour probabilistes, plutôt que sur un grand ensemble de points de référence.    
 
-On constate qu’en accroissant le nombre d'amers dans l’environnement de simulation, les performances du filtre de Kalman s’améliorent légèrement : l’erreur, la covariance et la taille de l’ellipse diminuent, signe d’un fonctionnement plus précis de l’algorithme. Cette amélioration s’explique sans doute par une meilleure sélection des références, offrant un compromis optimal entre erreurs angulaires et erreurs de distance.
-
-
-## Q8
-
-Ici on peut voir des simulations où seulement les mesures de distance sont disponibles et aussi en faisant varier le nombre d'amers sur la carte (nLandmarks):
-
-<p align="center">
-  <img src="Q8-n=4.png" alt="" title="" width="500">
-  <br>
-  <em>Figure 15 – nLandmarks = 4 </em>
-</p>
-
-<p align="center">
-  <img src="Q8-n=100.png" alt="" title="" width="500">
-  <br>
-  <em>Figure 16 –  nLandmarks = 100 </em>
-</p>
-
-<p align="center">
-  <img src="Q8-n=200.png" alt="" title="" width="500">
-  <br>
-  <em>Figure 17 –  nLandmarks = 200 </em>
-</p>
-
-On observe que lorsque seules les mesures de distance sont utilisées pour le filtre de Kalman, les résultats deviennent plus fluctuants, avec une variance plus élevée pour tous les états et une trajectoire moins lisse. Cependant, le filtre reste précis, l’aire de l’ellipse ne montrant pas de différence significative par rapport au cas de référence. Ainsi, le nombre de références sur la carte n’a pas d’impact majeur sur le fonctionnement du filtre.
-
-
-## Q9
-
-Ici on peut voir des simulations où seulement les mesures de direction sont disponibles et aussi en faisant varier le nombre d'amers sur la carte (nLandmarks):
-
-<p align="center">
-  <img src="Q9-n=4.png" alt="" title="" width="500">
-  <br>
-  <em>Figure 18 – nLandmarks = 4 </em>
-</p>
-
-<p align="center">
-  <img src="Q9-n=100.png" alt="" title="" width="500">
-  <br>
-  <em>Figure 19 –  nLandmarks = 100 </em>
-</p>
-
-<p align="center">
-  <img src="Q9-n=200.png" alt="" title="" width="500">
-  <br>
-  <em>Figure 20 –  nLandmarks = 200 </em>
-</p>
-
-
-On constate que lorsque seules les mesures d’angle sont utilisées dans le filtre de Kalman, la trajectoire reste globalement stable. Contrairement au cas des distances, l’ajout de références supplémentaires améliore nettement la précision de la trajectoire, montrant que les mesures d’angle sont particulièrement sensibles à la présence de références dans la simulation.
