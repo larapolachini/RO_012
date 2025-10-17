@@ -94,8 +94,17 @@ def motion_model(x, u_tilda, dt_pred, QEst):
     # x: estimated state (x, y, heading)
     # u_tilda: noised control input (Vx, Vy, angular rate)
     
-    # ...................
-    
+    xk, yk, thetak = x[0, 0], x[1, 0], x[2, 0]
+
+    w = np.sqrt(QEst) @ np.random.randn(3, 1)
+
+    e_vx, e_vy, e_om = (u_tilda + w).reshape(3,)
+
+    xPred = np.zeros_like(x)
+    xPred[0, 0]= xk + dt_pred*(e_vx * np.cos(thetak) - e_vy * np.sin(thetak))
+    xPred[1, 0]= yk +dt_pred*(e_vx * np.sin(thetak) + e_vy * np.cos(thetak))
+    xPred[2, 0]= angle_wrap(thetak + dt_pred * e_om)
+
     return xPred
 
 
@@ -105,8 +114,14 @@ def observation_model(xVeh, iFeature, Map):
     # iFeature: observed amer index
     # Map: map of all amers
     
-    # ...................
-    
+    xk, yk, thetak = xVeh [0, 0], xVeh[1, 0], xVeh[2, 0]
+    xp, yp = Map[0][iFeature], Map[1][iFeature]
+
+    z = np.zeros((2, 1))
+    z[0] = np.sqrt((xp - xk)**2 + (yp - yk)**2)
+    z[1] = np.arctan2(yp - yk, xp - xk) - thetak
+    z[1, 0] = angle_wrap(z[1, 0])
+
     return z
 
 
@@ -237,6 +252,56 @@ def plotParticles(simulation, k, iFeature, hxTrue, hxOdom, hxEst, hxError, hxSTD
     if save: plt.savefig(r'outputs/SRL' + str(k) + '.png')
 #        plt.pause(0.01)
 
+def run_once(theta_eff, Tf=300, dt_pred=1, dt_meas=1, nParticles_local=300):
+    
+    np.random.seed(seed)
+    nLandmarks = 5
+    Map = 120*np.random.rand(2, nLandmarks)-60
+    QTrue = np.diag([0.02, 0.02, 1*pi/180]) ** 2
+    RTrue = np.diag([0.5, 1*pi/180]) ** 2
+    QEst  = 2 * np.eye(3) @ QTrue
+    REst  = 2 * np.eye(2) @ RTrue
+    REst_inv = np.linalg.inv(REst)
+
+    xTrue = np.array([[1, -50, 0]]).T
+    xOdom = xTrue.copy()
+    xParticles = xTrue + np.diag([1, 1, 0.1]) @ np.random.randn(3, nParticles_local)
+    wp = np.ones(nParticles_local) / nParticles_local
+
+    sim = Simulation(Tf, dt_pred, xTrue, QTrue, xOdom, Map, RTrue, dt_meas)
+
+    for k in range(1, sim.nSteps):
+        sim.simulate_world(k)
+        xOdom, u_tilda = sim.get_odometry(k)
+
+        # Prediction
+        for p in range(nParticles_local):
+            xParticles[:, p:p+1] = motion_model(xParticles[:, p:p+1], u_tilda, dt_pred, QEst)
+
+        # Correction
+        z, iFeature = sim.get_observation(k)
+        if z is not None:
+            for p in range(nParticles_local):
+                zPred = observation_model(xParticles[:, p:p+1], iFeature, Map)
+                Innov = z - zPred
+                Innov[1, 0] = angle_wrap(Innov[1, 0])
+                wp[p] *= np.exp(-0.5 * (Innov.T @ REst_inv @ Innov))[0, 0]
+
+        # Normalization
+        s = np.sum(wp)
+        if s <= 1e-300 or not np.isfinite(s):
+            wp[:] = 1.0 / nParticles_local
+        else:
+            wp /= s
+
+        # Resampling avec theta_eff 
+        Neff = 1.0 / np.sum(wp**2)
+        Nth = nParticles_local * theta_eff
+        if Neff < Nth:
+            xParticles, wp = re_sampling(xParticles, wp)
+
+    return wp  
+
 
 # =============================================================================
 # Main Program
@@ -315,7 +380,8 @@ for k in range(1, simulation.nSteps):
     # do prediction
     # for each particle we add control vector AND noise
     
-    # ...................
+    for p in range(nParticles):
+        xParticles[:, p:p+1] = motion_model(xParticles[:, p:p+1], u_tilda, dt_pred, QEst)
 
     # observe a random feature
     [z, iFeature] = simulation.get_observation(k)
@@ -323,33 +389,35 @@ for k in range(1, simulation.nSteps):
     if z is not None:
         for p in range(nParticles):
             # Predict observation from the particle position
-            zPred = # ...................
+            zPred = observation_model(xParticles[:, p:p+1], iFeature, Map)
 
             # Innovation : perception error
-            Innov = # ...................
-            Innov[1] = angle_wrap(Innov[1])
+            Innov = z - zPred
+            Innov[1, 0] = angle_wrap(Innov[1, 0])
 
             # Compute particle weight using gaussian model
-            wp[p] = # ...................
+            REst_inv = np.linalg.inv(REst)
+            wp[p] = np.exp(-0.5 * (Innov.T @ REst_inv @ Innov))[0, 0] * wp[p]
     # Normalization
-    wp = # ...................
+    wp = wp/np.sum(wp)
     
     
     # Compute position as weighted mean of particles
-    xEst = # ...................
+    xEst = np.sum(xParticles * wp, axis = 1, keepdims=True)
+    xEst[2, 0] = angle_wrap(xEst[2, 0])
 
     # Compute particles std deviation
-    PEst = # ................... # Empirical covariance matrix
-    xSTD = # ................... # Column vector of standard deviations (sqrt of diagonal of PEst)
+    PEst = (wp * (xParticles - xEst)) @ (xParticles - xEst).T # Empirical covariance matrix
+    xSTD = np.sqrt(np.diag(PEst)).reshape(3,1) # Column vector of standard deviations (sqrt of diagonal of PEst)
     
     
     # Reampling
     theta_eff = 0.1
     Nth = nParticles * theta_eff
-    Neff = # ...................
+    Neff = 1.0/np.sum(wp**2)
     if Neff < Nth:
         # Particle resampling
-        xParticles, wp = # ...................
+        xParticles, wp = re_sampling(xParticles, wp)
 
 
     # store data history
@@ -364,6 +432,32 @@ for k in range(1, simulation.nSteps):
     # plot every 20 updates
     if is_plot and k*simulation.dt_pred % 20 == 0:
         plotParticles(simulation, k, iFeature, hxTrue, hxOdom, hxEst, hxError, hxSTD, htime, save = True)
+
+# ===== Varier theta_eff et plot histogrammes=====
+thetas = [0.0, 0.05, 0.1, 0.2, 0.4, 0.7, 1.0]
+plt.figure(figsize=(14, 8))
+
+Neff_means = []
+
+for i, th in enumerate(thetas, 1):
+    wp_final = run_once(th, Tf=300, dt_pred=1, dt_meas=1, nParticles_local=300)
+    Neff = 1.0 / np.sum(wp_final**2)
+    Neff_means.append(Neff)
+
+    plt.subplot(3, 3, i)
+    plt.hist(wp_final, bins=20)
+    plt.title(fr'$\theta_{{eff}}$={th}, Neff={Neff:.1f}')
+    plt.xlabel('poid'); plt.ylabel('compte')
+
+plt.tight_layout()
+plt.savefig('ParticleWeights_vs_ThetaEff.png')
+
+# Courbe de Neff 
+plt.figure(figsize=(6,4))
+plt.plot(thetas, Neff_means, marker='o'); plt.grid(True)
+plt.xlabel(r'$\theta_{\mathrm{eff}}$'); plt.ylabel('Neff (final)')
+plt.title('Diversite vs. $\Theta_{eff}$')
+plt.show()
 
 
 
