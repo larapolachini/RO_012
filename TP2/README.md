@@ -113,7 +113,7 @@ Lorsque les mesures sont coupées entre 250 s et 350 s, le filtre particulaire n
 Ici sont présentées quelques simulations résultant de la variation de la fréquence de mesure
 
 <p align="center">
-  <img src="Q7-dt_meas=10.png" alt="" title="" width="500">
+  <img src="Q7-dt=10.png" alt="" title="" width="500">
   <br>
   <em>Figure 10 – Variation de la fréquence de mesure dt_meas = 10 </em>
 </p>
@@ -128,15 +128,30 @@ Ici on peut voir des simulations en faisant varier le nombre d'amers sur la cart
 <p align="center">
   <img src="Q8-n=4.png" alt="" title="" width="500">
   <br>
-  <em>Figure 12 – nLandmarks = 4 </em>
+  <em>Figure 11 – nLandmarks = 4 </em>
 </p>
 
 <p align="center">
   <img src="Q8-n=100.png" alt="" title="" width="500">
   <br>
-  <em>Figure 13 –  nLandmarks = 100 </em>
+  <em>Figure 12 –  nLandmarks = 100 </em>
 </p>
 
 
 On constate qu’en accroissant le nombre d'amers dans l’environnement de simulation, il n'a pas beaucoup d'influence sur le resultat du filtre particulaire car l'erreur, la covariance et la trajectoire ne présentent pas des changements significatives. Tant que les particules sont bien réparties et que le modèle de capteur relie avec précision les mesures aux amers, le filtre peut fonctionner efficacement avec un nombre réduit d'amers en se concentrant sur les mises à jour probabilistes, plutôt que sur un grand ensemble de points de référence.    
 
+## Q9
+
+Une autre façon de ré-échantilloner les poids, c'est utiliser le ré-échantillonnage résiduel, qui est une méthode qui consiste à copier de façon déterministe les particules les plus importantes, puis à compléter le reste par un tirage aléatoire sur les poids résiduels. Cette approche réduit la variance introduite par le ré-échantillonnage classique et évite de dépendre uniquement du hasard.
+
+Avec la simulation, on a:
+
+<p align="center">
+  <img src="Q9.png" alt="" title="" width="500">
+  <br>
+  <em>Figure 13 – Ré-échantillonnage résiduel </em>
+</p>
+
+Dans les résultats obtenus, la trajectoire estimée reste stable et bien alignée avec la trajectoire réelle, mais avec moins d’oscillations. Les bandes d’incertitude (en rouge) sont plus serrées et plus régulières, ce qui montre une meilleure stabilité statistique. L’erreur (en bleu) est également légèrement réduite par rapport à la méthode originale.
+
+En diminuant la variance, le ré-échantillonnage résiduel maintient une meilleure diversité des particules tout en donnant plus de poids aux plus probables. Cette méthode améliore ainsi la précision et la robustesse du filtre particulaire, surtout lorsque certaines particules dominent les poids. C’est une alternative efficace et simple au ré-échantillonnage multinomial.

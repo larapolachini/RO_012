@@ -272,6 +272,37 @@ def plotParticles(simulation, k, iFeature, hxTrue, hxOdom, hxEst, hxError, hxSTD
     if save: plt.savefig(r'outputs/SRL' + str(k) + '.png')
 #        plt.pause(0.01)
 
+
+# Q9: resampling par résidu
+def resampling_residual(px, pw):
+    N = pw.size
+    # 1) Copie déterministe
+    copies = np.floor(N * pw).astype(int)         # nombre de copies par particule
+    idx_det = np.repeat(np.arange(N), copies)     # index déterministes
+    n_det = idx_det.size
+
+    # 2) Masse résiduelle
+    residual = N * pw - copies                    # dans [0,1)
+    r_sum = residual.sum()
+    K = N - n_det                                 # échantillons restants
+
+    if K > 0 and r_sum > 0:
+        residual = residual / r_sum
+        idx_stoch = np.random.choice(np.arange(N), size=K, p=residual)
+        indexes = np.concatenate([idx_det, idx_stoch])
+    else:
+        # cas limite: tout déterministe (ou poids dégénérés)
+        indexes = idx_det if n_det == N else np.random.choice(np.arange(N), N)
+
+    # Réordonner (optionnel)
+    np.random.shuffle(indexes)
+
+    # Recomposer
+    px = px[:, indexes]
+    pw = np.ones_like(pw) / N
+    return px, pw
+
+
 def run_once(theta_eff, Tf=300, dt_pred=1, dt_meas=1, nParticles_local=300):
     
     np.random.seed(seed)
@@ -339,7 +370,7 @@ dt_pred = 1     # Time between two dynamical predictions (s)
 dt_meas = 1     # Time between two measurement updates (s)
 
 # Location of landmarks
-nLandmarks = 100
+nLandmarks = 5
 Map = 120*np.random.rand(2, nLandmarks)-60
 
 # True covariance of errors used for simulating robot movements
@@ -437,7 +468,7 @@ for k in range(1, simulation.nSteps):
     Neff = 1.0/np.sum(wp**2)
     if Neff < Nth:
         # Particle resampling
-        xParticles, wp = re_sampling(xParticles, wp)
+        xParticles, wp = resampling_residual(xParticles, wp)
 
 
     # store data history
