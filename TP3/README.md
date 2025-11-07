@@ -79,7 +79,7 @@ With unknown data association and only a few landmarks near the start, EKF suffe
   <em>Figure 6 – A long loop and a sparse map with only few landmarks near the start position with KNOWN_DATA_ASSOCIATION = 0 with Q and Py = 0.5 </em>
 </p>
 
-#### Q and Py equal than the values used for simulation (Q_Sim and Py_Sim)
+#### Q and Py equal to the values used for simulation (Q_Sim and Py_Sim)
 
 <p align="center">
   <img src="Q3-b.png" alt="" title="" width="500">
