@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 DT = 0.1  # time tick [s]
-SIM_TIME = 80.0  # simulation time [s]
+SIM_TIME = 100.0  # simulation time [s]
 MAX_RANGE = 10.0  # maximum observation range
 M_DIST_TH = 9.0  # Threshold of Mahalanobis distance for data association.
 STATE_SIZE = 3  # State size [x,y,yaw]
@@ -129,7 +129,9 @@ def calc_input():
     """
 
     v = 1  # [m/s]
-    yaw_rate = 0.1  # [rad/s]
+    #yaw_rate = 0.1  # [rad/s]
+    #yaw_rate = 0.2 # small radius loop: faster rotation
+    yaw_rate = 0.08 # big radius loop: slower rotation
     u = np.array([[v, yaw_rate]]).T
     return u
 
@@ -342,6 +344,12 @@ def ekf_slam(xEst, PEst, u, y):
     return xEst, PEst
 
 
+def ring_landmarks(R=12.5, cx=0.0, cy=12.5, n=12):
+    th = np.linspace(0, 2*np.pi, n, endpoint=False)
+    xs = cx + R*np.cos(th)
+    ys = cy + R*np.sin(th)
+    return np.vstack([xs, ys]).T
+
 # --- Main script
 
 def main():
@@ -349,11 +357,38 @@ def main():
 
     time = 0.0
 
-    # Define landmark positions [x, y]
-    Landmarks = np.array([[0.0, 5.0],
-                          [11.0, 1.0],
-                          [3.0, 15.0],
-                          [-5.0, 20.0]])
+    # Define landmark positions [x, y] original code
+    #Landmarks = np.array([[0.0, 5.0],
+    #                      [11.0, 1.0],
+    #                      [3.0, 15.0],
+    #                      [-5.0, 20.0]])
+
+    # short loop, dense map Q1-a
+    #Landmarks = np.array([[0, 2], [0, 4], [0, 6], [0, 8], 
+    #                      [-8, 5], [-6, 5], [-4, 5], [-2, 5],
+    #                      [8, 5], [6, 5], [4, 5], [2, 5],
+    #                      [-5, 10], [5, 10], [5, 0], [-5, 0],
+    #                      [-7, 7], [-7, 2], [7, 7], [7, 2],
+    #                      [-4, 5], [-3, 7], [-2, 9], [-1, 6],
+    #                      [1, 5], [2, 7], [3, 8], [4, 6],
+    #                      [-3, 8], [-2, 7], [-1, 6], [2, 6], 
+    #                      [3, 7], [-4, 3], [-1, 4], [1, 4], 
+    #                      [4, 3], [1, 4], [2, 3], [-3, 3], 
+    #                      [-2, 2], [1, 1], [-1, 1], [1, 9]
+    #], dtype=float)
+
+    # landmarks for Q1-b
+    #Landmarks = np.vstack([
+    #    ring_landmarks(R=12.5, cx=0.0, cy=12.5, n=12),   # dense ring along the path
+    #    ring_landmarks(R=9.0,  cx=0.0, cy=12.5, n=8),    # inner ring to keep something in range
+    #    [[0.0, 0.0]]                                     # (optional) center landmark
+    #]).astype(float)
+
+    # landmark positions for Q1-c
+    Landmarks = np.array([[0, 0], [0, 2], [0, -2],
+                          [2, 0], [-2, 0], [2,2], 
+                          [-2,2], [2,-2], [-2,-2]])
+
 
     # Init state vector [x y yaw]' and covariance for Kalman
     xEst = np.zeros((STATE_SIZE, 1))
@@ -424,7 +459,8 @@ def main():
 
 
 
-            ax1.axis([-12, 12, -2, 22])
+            #ax1.axis([-12, 12, -2, 22])
+            ax1.axis([-17, 17, -2, 27])
             ax1.grid(True)
             ax1.legend()
             
