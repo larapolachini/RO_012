@@ -19,6 +19,19 @@ STATE_SIZE = 3  # State size [x,y,yaw]
 LM_SIZE = 2  # LM state size [x,y]
 KNOWN_DATA_ASSOCIATION = 1  # Whether we use the true landmarks id or not
 
+
+# UDI parameters
+UDI_R_LIST = [2.0, 4.0, 6.0, 8.0]        # guessed ranges along the ray (<= MAX_RANGE)
+UDI_P_RADIAL = 9.0                        # big variance along the ray (m^2)
+UDI_P_TANG   = 0.5                        # smaller across-ray variance
+UDI_PRUNE_THRESH = 1e-4                   # prune hypothesis if its weight gets too small
+
+# book-keeping for hypothesis weights (indexed like landmarks in state)
+lm_weights = []   # one weight per landmark (same order as in xEst)
+lm_groups  = []   # group id per landmark (hypotheses of same real feature share a group)
+next_group_id = 0
+
+
 # Simulation parameter
 # noise on control input
 Q_sim = (3 * np.diag([0.1, np.deg2rad(1)])) ** 2
@@ -29,7 +42,7 @@ Py_sim = (1 * np.diag([0.1, np.deg2rad(5)])) ** 2
 # Estimated input noise for Kalman Filter
 Q = 2 * Q_sim
 # Estimated measurement noise for Kalman Filter
-Py = 2 * Py_sim
+Py = np.array([[2 * Py_sim[1, 1]]])   # 1x1 (bearing variance only)
 
 # Initial estimate of pose covariance
 initPEst = 0.01 * np.eye(STATE_SIZE)
@@ -47,6 +60,49 @@ ax5 = plt.subplot(3, 2, 6)
 
 
 # --- Helper functions
+
+def add_landmark_hypothesis(xEst, PEst, r, angle_meas, group_id):
+    # hypothesized absolute position
+    lx = xEst[0, 0] + r * math.cos(xEst[2, 0] + angle_meas)
+    ly = xEst[1, 0] + r * math.sin(xEst[2, 0] + angle_meas)
+    lm = np.array([[lx], [ly]])
+
+    # append to state
+    xEst = np.vstack((xEst, lm))
+
+    # build oriented covariance for this landmark block
+    c, s = math.cos(xEst[2, 0] + angle_meas), math.sin(xEst[2, 0] + angle_meas)
+    Rdir = np.array([[c, -s], [s, c]])  # rotation from local (radial,tangential) to world
+    Plm_local = np.diag([UDI_P_RADIAL, UDI_P_TANG])
+    Plm_world = Rdir @ Plm_local @ Rdir.T
+
+    # cross-covariances using Jacobians of augmentation (approx with Jr for pose only)
+    Jr = np.array([[1.0, 0.0, -r * s],
+                   [0.0, 1.0,  r * c]])
+    # extend P (pose cross terms)
+    bottomPart = np.hstack((Jr @ PEst[0:3, 0:3], Jr @ PEst[0:3, 3:]))
+    rightPart  = bottomPart.T
+    PEst = np.vstack((np.hstack((PEst, rightPart)),
+                      np.hstack((bottomPart, Jr @ PEst[0:3, 0:3] @ Jr.T + Plm_world))))
+    # bookkeeping
+    lm_weights.append(1.0 / len(UDI_R_LIST))  # start uniform
+    lm_groups.append(group_id)
+    return xEst, PEst
+
+def prune_landmark(xEst, PEst, i):
+    global lm_weights, lm_groups
+    id0 = STATE_SIZE + 2*i
+    keep_idx = list(range(id0)) + list(range(id0+2, len(xEst)))
+    xEst = xEst[keep_idx, :]
+
+    keep_rows = keep_idx
+    keep_cols = keep_idx
+    PEst = PEst[np.ix_(keep_rows, keep_cols)]
+
+    del lm_weights[i]
+    del lm_groups[i]
+    return xEst, PEst
+
 
 def calc_n_lm(x):
     """
@@ -171,34 +227,27 @@ def jacob_motion(x, u):
 
 def observation(xTrue, xd, uTrue, Landmarks):
     """
-    Generate noisy control and observation and update true position and dead reckoning
+    Bearing-only perception: y = [angle, id]
     """
     xTrue = motion_model(xTrue, uTrue)
 
-    # add noise to gps x-y
-    y = np.zeros((0, 3))
-
+    y = np.zeros((0, 2))  # angle, id
     for i in range(len(Landmarks[:, 0])):
-
         dx = Landmarks[i, 0] - xTrue[0, 0]
         dy = Landmarks[i, 1] - xTrue[1, 0]
-        d = math.hypot(dx, dy)
-        angle = pi_2_pi(math.atan2(dy, dx) - xTrue[2, 0])
+        d  = math.hypot(dx, dy)
         if d <= MAX_RANGE:
-            dn = d + np.random.randn() * Py_sim[0, 0] ** 0.5  # add noise
-            dn = max(dn,0)
-            angle_n = angle + np.random.randn() * Py_sim[1, 1] ** 0.5  # add noise
-            yi = np.array([dn, angle_n, i])
+            angle = pi_2_pi(math.atan2(dy, dx) - xTrue[2, 0])
+            angle_n = angle + np.random.randn() * (Py_sim[1, 1] ** 0.5)
+            yi = np.array([angle_n, i])
             y = np.vstack((y, yi))
 
-    # add noise to input
-    u = np.array([[
-        uTrue[0, 0] + np.random.randn() * Q_sim[0, 0] ** 0.5,
-        uTrue[1, 0] + np.random.randn() * Q_sim[1, 1] ** 0.5]]).T
-
+    # noisy control for dead-reckoning
+    u = np.array([[uTrue[0, 0] + np.random.randn() * Q_sim[0, 0] ** 0.5,
+                   uTrue[1, 0] + np.random.randn() * Q_sim[1, 1] ** 0.5]]).T
     xd = motion_model(xd, u)
-    
     return xTrue, y, xd, u
+
 
 
 def search_correspond_landmark_id(xEst, PEst, yi):
@@ -243,6 +292,28 @@ def jacob_h(q, delta, x, i):
 
     return H
 
+def jacob_h_bearing(x, i):
+    """
+    H for bearing-only: h = atan2(dy,dx) - theta
+    Returns 1 x (3+2n) matrix
+    """
+    nLM = calc_n_lm(x)
+    lm = get_landmark_position_from_state(x, i)
+    delta = lm - x[0:2]
+    q = (delta.T @ delta)[0, 0]
+    dx, dy = delta[0, 0], delta[1, 0]
+
+    # d(angle)/d(...)
+    G2 = np.array([[ dy / q, -dx / q, -1.0, -dy / q, dx / q ]])  # 1x5
+
+    F1 = np.hstack((np.eye(3), np.zeros((3, 2 * nLM))))
+    F2 = np.hstack((np.zeros((2, 3)), np.zeros((2, 2 * i)),
+                    np.eye(2), np.zeros((2, 2 * nLM - 2 * (i + 1)))))
+    F  = np.vstack((F1, F2))
+    H  = G2 @ F
+    return H, q, delta
+
+
 
 def jacob_augment(x, y):
     """
@@ -282,66 +353,87 @@ def calc_innovation(xEst, PEst, y, LMid):
     
     return innov, S, H
 
+def calc_innovation_bearing(xEst, PEst, angle_meas, LMid):
+    lm = get_landmark_position_from_state(xEst, LMid)
+    delta = lm - xEst[0:2]
+    y_angle_pred = math.atan2(delta[1, 0], delta[0, 0]) - xEst[2, 0]
+    innov = np.array([[pi_2_pi(angle_meas - y_angle_pred)]])  # 1x1
+    H, _, _ = jacob_h_bearing(xEst, LMid)
+    S = H @ PEst @ H.T + Py  # 1x1
+    return innov, S, H
+
+
 
 def ekf_slam(xEst, PEst, u, y):
-    """
-    Apply one step of EKF predict/correct cycle
-    """
-    
-    S = STATE_SIZE
-    
+    global next_group_id
+
+    S_ = STATE_SIZE
     # Predict
-    A, B = jacob_motion(xEst[0:S], u)
+    A, B = jacob_motion(xEst[0:S_], u)
+    xEst[0:S_] = motion_model(xEst[0:S_], u)
+    PEst[0:S_, 0:S_] = A @ PEst[0:S_, 0:S_] @ A.T + B @ Q @ B.T
+    PEst[0:S_, S_:] = A @ PEst[0:S_, S_:]
+    PEst[S_:, 0:S_] = PEst[0:S_, S_:].T
+    PEst = 0.5 * (PEst + PEst.T)
 
-    xEst[0:S] = motion_model(xEst[0:S], u)
-
-    PEst[0:S, 0:S] = A @ PEst[0:S, 0:S] @ A.T + B @ Q @ B.T
-    PEst[0:S,S:] = A @ PEst[0:S,S:]
-    PEst[S:,0:S] = PEst[0:S,S:].T
-
-    PEst = (PEst + PEst.T) / 2.0  # ensure symetry
-    
-    # Update
-    for iy in range(len(y[:, 0])):  # for each observation
+    # Update (bearing-only)
+    for k in range(len(y[:, 0])):
+        angle_meas = y[k, 0]
+        # === Data association: pick the lm (if any) with smallest Mahalanobis on bearing
         nLM = calc_n_lm(xEst)
-        
-        if KNOWN_DATA_ASSOCIATION:
-            try:
-                min_id = trueLandmarkId.index(y[iy, 2])
-            except ValueError:
-                min_id = nLM
-                trueLandmarkId.append(y[iy, 2])
+        best_i, best_d = -1, M_DIST_TH
+        for i in range(nLM):
+            innov, S, H = calc_innovation_bearing(xEst, PEst, angle_meas, i)
+            d = float(innov @ np.linalg.inv(S) @ innov.T)  # scalar
+            if d < best_d:
+                best_d = d
+                best_i = i
+
+        if best_i < 0:
+            # --- New perceived direction: create hypothesis bank along the ray
+            gid = next_group_id; next_group_id += 1
+            for r in UDI_R_LIST:
+                xEst, PEst = add_landmark_hypothesis(xEst, PEst, r, angle_meas, gid)
+            continue  # no correction this step (we just seeded hypotheses)
         else:
-            min_id = search_correspond_landmark_id(xEst, PEst, y[iy, 0:2])
+            # --- EKF correction using the MOST LIKELY hypothesis among the same group
+            # Compute likelihoods for all hypotheses in this group
+            gid = lm_groups[best_i]
+            idxs = [i for i in range(nLM) if lm_groups[i] == gid]
+            lik = []
+            for i in idxs:
+                innov, S, H = calc_innovation_bearing(xEst, PEst, angle_meas, i)
+                L = float(np.exp(-0.5 * innov * (np.linalg.inv(S)) * innov) / np.sqrt(2*np.pi*S))
+                lik.append(L)
+            # normalize & update weights
+            lik = np.array(lik).reshape(-1)
+            lik = lik / (np.sum(lik) + 1e-12)
+            for j, i in enumerate(idxs):
+                lm_weights[i] *= lik[j]
 
+            # pick the max-weight hypothesis
+            i_star = idxs[int(np.argmax([lm_weights[i] for i in idxs]))]
 
-        # Extend map if required
-        if min_id == nLM:
-            print("New LM")
-            
-            # Extend state and covariance matrix
-            xEst = np.vstack((xEst, calc_landmark_position(xEst, y[iy, :])))
-
-            Jr, Jy = jacob_augment(xEst[0:3], y[iy, :])
-            bottomPart = np.hstack((Jr @ PEst[0:3, 0:3], Jr @ PEst[0:3, 3:]))
-            rightPart = bottomPart.T
-            PEst = np.vstack((np.hstack((PEst, rightPart)),
-                              np.hstack((bottomPart,
-                              Jr @ PEst[0:3, 0:3] @ Jr.T + Jy @ Py @ Jy.T))))
-
-        else:
-            # Perform Kalman update
-            innov, S, H = calc_innovation(xEst, PEst, y[iy, 0:2], min_id)
+            # EKF update only with i_star
+            innov, S, H = calc_innovation_bearing(xEst, PEst, angle_meas, i_star)
             K = (PEst @ H.T) @ np.linalg.inv(S)
-            
-            xEst = xEst + (K @ innov)
-                        
+            xEst = xEst + K @ innov
             PEst = (np.eye(len(xEst)) - K @ H) @ PEst
-            PEst = 0.5 * (PEst + PEst.T)  # Ensure symetry
-        
-    xEst[2] = pi_2_pi(xEst[2])
+            PEst = 0.5 * (PEst + PEst.T)
 
+            # prune weak hypotheses from the same group
+            # (recompute nLM each time because indices shift after pruning)
+            i = 0
+            while i < calc_n_lm(xEst):
+                if lm_groups[i] == gid and lm_weights[i] < UDI_PRUNE_THRESH and i != i_star:
+                    xEst, PEst = prune_landmark(xEst, PEst, i)
+                    # do not increment i (list shrank)
+                else:
+                    i += 1
+
+    xEst[2] = pi_2_pi(xEst[2])
     return xEst, PEst
+
 
 
 def ring_landmarks(R=12.5, cx=0.0, cy=12.5, n=12):
@@ -379,14 +471,16 @@ def main():
         [[0.0, 0.0]]                                     # (optional) center landmark
     ]).astype(float)
 
-    """
+    
 
     # landmark positions for Q1-c
     Landmarks = np.array([[0, 0], [0, 2], [0, -2],
                           [2, 0], [-2, 0], [2,2], 
                           [-2,2], [2,-2], [-2,-2]])
 
-
+"""
+    # landmark positions for Q4 (sparse landmarks)
+    Landmarks = np.array([[12.0, 12.5]])
 
 
     # Init state vector [x y yaw]' and covariance for Kalman
@@ -483,7 +577,7 @@ def main():
             plt.pause(0.001)
 
 
-    plt.savefig('EKFSLAM.png')
+    plt.savefig('EKFSLAM_Q4.png')
 
     tErrors = np.sqrt(np.square(hxError[0, :]) + np.square(hxError[1, :]))
     oErrors = np.sqrt(np.square(hxError[2, :]))
