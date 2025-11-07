@@ -74,7 +74,7 @@ With unknown data association and only a few landmarks near the start, EKF suffe
 #### Q and Py smaller than the values used for simulation (Q_Sim and Py_Sim)
 
 <p align="center">
-  <img src="Q2-a.png" alt="" title="" width="500">
+  <img src="Q3-a.png" alt="" title="" width="500">
   <br>
   <em>Figure 6 – A long loop and a sparse map with only few landmarks near the start position with KNOWN_DATA_ASSOCIATION = 0 with Q and Py = 0.5 </em>
 </p>
@@ -82,7 +82,7 @@ With unknown data association and only a few landmarks near the start, EKF suffe
 #### Q and Py equal than the values used for simulation (Q_Sim and Py_Sim)
 
 <p align="center">
-  <img src="Q2-b.png" alt="" title="" width="500">
+  <img src="Q3-b.png" alt="" title="" width="500">
   <br>
   <em>Figure 6 – A long loop and a sparse map with only few landmarks near the start position with KNOWN_DATA_ASSOCIATION = 0 with Q and Py = 1  </em>
 </p>
@@ -90,7 +90,7 @@ With unknown data association and only a few landmarks near the start, EKF suffe
 #### Q and Py larger than the values used for simulation (Q_Sim and Py_Sim)
 
 <p align="center">
-  <img src="Q2-c.png" alt="" title="" width="500">
+  <img src="Q3-c.png" alt="" title="" width="500">
   <br>
   <em>Figure 6 – A long loop and a sparse map with only few landmarks near the start position with KNOWN_DATA_ASSOCIATION = 0 with Q and Py = 3 </em>
 </p>
